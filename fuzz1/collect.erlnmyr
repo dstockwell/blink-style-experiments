@@ -1,0 +1,12 @@
+digraph fuzz {
+  imports="['./phases', '../common']";
+
+  range -> map -> generateDOM -> dateTag -> trace -> mergeTags -> log -> traceFilter -> jsonStringify -> writeStringFile;
+
+  range [start="1", end="21", step="1"];
+  map [expr="2000*it*it"];
+  mergeTags [inputs="['date', 'size']", spec="traces/$1-$2.trace", output="filename"];
+  log [tags="['filename']", justTags="true"];
+  traceFilter [traceEvents="['Document::updateStyle']"];
+  writeStringFile [tag="filename"];
+}

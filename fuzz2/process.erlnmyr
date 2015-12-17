@@ -1,0 +1,11 @@
+digraph process {
+  imports="['./phases', '../common']";
+  optionAliases="input=input.data,xvariable=amalgamate.idTag";
+
+  input -> readDir -> fileToJSON -> traceFilter -> updateTag -> extractTags;
+  extractTags -> traceTree -> traceAnalyser -> amalgamate -> log;
+
+  traceFilter [traceEvents="['HTMLDocumentParser::processParsedChunkFromBackgroundParser','Document::updateStyle','FrameView::performLayout']"];
+  updateTag [tag="filename", in="/.*[/](.+)[.]trace/", out="$1"];
+  extractTags [tags="['date', 'branchiness', 'depthicity', 'nodeCount', 'seed']"];
+}

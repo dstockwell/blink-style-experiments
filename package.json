@@ -9,6 +9,9 @@
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
-    "erlenmeyer": "git+https://github.com/GoogleChrome/erlnmyr.git"
+    "erlenmeyer": "git+https://github.com/lfairy/erlnmyr.git#misc-fix"
+  },
+  "dependencies": {
+    "seedrandom": "^2.4.2"
   }
 }

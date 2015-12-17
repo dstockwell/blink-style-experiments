@@ -33,3 +33,7 @@ node_modules
 
 # Nodejs version manager. https://github.com/creationix/nvm
 .nvmrc
+
+# Data files
+traces/
+*.html
