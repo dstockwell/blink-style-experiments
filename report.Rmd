@@ -1,0 +1,73 @@
+---
+title: "Style engine performance experiments"
+author: "Chris Wong"
+date: "December 16, 2015"
+output:
+  html_document:
+    keep_md: yes
+---
+
+```{r, echo=FALSE}
+library(ggplot2)
+```
+
+```{r, echo=FALSE}
+fuzz <- read.csv('fuzz1/summary.csv')
+names(fuzz)[names(fuzz) == 'id'] <- 'size'
+
+fuzz.lm <- coef(with(fuzz, lm(Document..updateStyle ~ size)))
+fuzz.cor <- with(fuzz, cor(size, Document..updateStyle))
+```
+
+For the first experiment, the author generated random DOM fragments, and measured the time taken to call `Document::updateStyle`. `r length(fuzz$size)` samples were collected in total.
+
+Update times fit a linear regression model with intercept `r format(fuzz.lm[1])` and slope `r format(fuzz.lm[2])`. The correlation coefficient is `r format(fuzz.cor)`, suggesting a very strong correlation.
+
+```{r, echo=FALSE}
+ggplot(fuzz, aes(x = size, y = Document..updateStyle)) +
+  labs(title = "Passing random DOM fragments to Document::updateStyle",
+       x = "Length of DOM string (bytes)",
+       y = "Time taken in Document::updateStyle (μs)") +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+# Varying branching factor
+
+```{r, echo=FALSE}
+fuzz2.branchiness <- read.csv('fuzz2/summary-branchiness.csv')
+names(fuzz2.branchiness)[names(fuzz2.branchiness) == 'id'] <- 'branchiness'
+```
+
+In the next experiment, the HTML fragments had a flat structure with no nesting. `r length(fuzz2.branchiness$branchiness)` samples were collected in total.
+
+As before, the update time increased linearly with the number of nodes.
+
+```{r, echo=FALSE}
+ggplot(fuzz2.branchiness, aes(x = branchiness, y = Document..updateStyle)) +
+  labs(title = "Random DOM fragments by branching factor",
+       x = "Branching factor",
+       y = "Time taken in Document::updateStyle (μs)") +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+# Varying tree height
+
+```{r, echo=FALSE}
+fuzz2.depthicity <- read.csv('fuzz2/summary-depthicity.csv')
+names(fuzz2.depthicity)[names(fuzz2.depthicity) == 'id'] <- 'depthicity'
+```
+
+In the final experiment, the fragments had a deeply nested structure. All nodes, except the innermost leaf node, had exactly one child. `r length(fuzz2.depthicity$depthicity)` samples were collected in total.
+
+Again, the growth was linear.
+
+```{r, echo=FALSE}
+ggplot(fuzz2.depthicity, aes(x = depthicity, y = Document..updateStyle)) +
+  labs(title = "Random DOM fragments by tree height",
+       x = "Tree height",
+       y = "Time taken in Document::updateStyle (μs)") +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```

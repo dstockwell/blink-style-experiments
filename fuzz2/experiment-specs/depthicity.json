@@ -1,0 +1,8 @@
+{
+    "minBranchiness": 1,
+    "maxBranchiness": 1,
+    "minDepthicity": 1,
+    "maxDepthicity": 1000,
+    "maxNodeCount": 100000,
+    "samples": 100
+}

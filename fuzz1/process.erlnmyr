@@ -1,0 +1,11 @@
+digraph process {
+  imports="['../common']";
+  optionAliases="input=input.data";
+
+  input -> readDir -> fileToJSON -> traceFilter -> tracePIDSplitter -> traceTIDSplitter;
+  traceTIDSplitter -> traceTree -> traceAnalyser -> updateTag -> amalgamate -> log;
+
+  traceFilter [traceEvents="['HTMLDocumentParser::processParsedChunkFromBackgroundParser','Document::updateStyle','FrameView::performLayout']"];
+  updateTag [tag="filename", in="/.*-([^-.]*).trace/", out="$1"];
+  amalgamate [idTag="filename"];
+}
