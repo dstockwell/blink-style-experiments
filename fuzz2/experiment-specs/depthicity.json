@@ -4,5 +4,6 @@
     "minDepthicity": 1,
     "maxDepthicity": 1000,
     "maxNodeCount": 100000,
-    "samples": 100
+    "tagMap": "simple",
+    "samples": 50
 }

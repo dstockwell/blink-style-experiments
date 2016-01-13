@@ -4,5 +4,6 @@
     "minDepthicity": 1,
     "maxDepthicity": 1,
     "maxNodeCount": 100000,
-    "samples": 100
+    "tagMap": "alexa",
+    "samples": 50
 }
