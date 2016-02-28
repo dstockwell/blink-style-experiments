@@ -7,5 +7,5 @@ digraph process {
 
   traceFilter [traceEvents="['HTMLDocumentParser::processParsedChunkFromBackgroundParser','Document::updateStyle','FrameView::performLayout']"];
   updateTag [tag="filename", in="/.*-([^-.]*).trace/", out="$1"];
-  amalgamate [idTag="filename"];
+  amalgamate [tags="['filename']"];
 }

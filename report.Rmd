@@ -9,19 +9,22 @@ output:
 
 ```{r, echo=FALSE}
 library(ggplot2)
+library(corrgram)
 ```
+
+# Initial experiments
 
 ```{r, echo=FALSE}
 fuzz <- read.csv('fuzz1/summary.csv')
-names(fuzz)[names(fuzz) == 'id'] <- 'size'
+names(fuzz)[names(fuzz) == 'filename'] <- 'size'
 
 fuzz.lm <- coef(with(fuzz, lm(Document..updateStyle ~ size)))
 fuzz.cor <- with(fuzz, cor(size, Document..updateStyle))
 ```
 
-For the first experiment, the author generated random DOM fragments, and measured the time taken to call `Document::updateStyle`. `r length(fuzz$size)` samples were collected in total.
+For the first experiment, the author generated random DOM fragments, and measured the time taken to call `Document::updateStyle`. These fragments had no CSS styling, other than the defaults provided by the browser. `r length(fuzz$size)` samples were collected in total.
 
-Update times fit a linear regression model with intercept `r format(fuzz.lm[1])` and slope `r format(fuzz.lm[2])`. The correlation coefficient is `r format(fuzz.cor)`, suggesting a very strong correlation.
+Update times fit a linear trend with intercept `r format(fuzz.lm[1])` and slope `r format(fuzz.lm[2])`. The correlation coefficient is `r format(fuzz.cor)`, suggesting a very strong correlation.
 
 ```{r, echo=FALSE}
 ggplot(fuzz, aes(x = size, y = Document..updateStyle)) +
@@ -32,11 +35,10 @@ ggplot(fuzz, aes(x = size, y = Document..updateStyle)) +
   geom_smooth(method = 'lm')
 ```
 
-# Varying branching factor
+## Varying branching factor
 
 ```{r, echo=FALSE}
 fuzz2.branchiness <- read.csv('fuzz2/summary-branchiness.csv')
-names(fuzz2.branchiness)[names(fuzz2.branchiness) == 'id'] <- 'branchiness'
 ```
 
 In the next experiment, the HTML fragments had a flat structure with no nesting. `r length(fuzz2.branchiness$branchiness)` samples were collected in total.
@@ -52,11 +54,10 @@ ggplot(fuzz2.branchiness, aes(x = branchiness, y = Document..updateStyle)) +
   geom_smooth(method = 'lm')
 ```
 
-# Varying tree height
+## Varying tree height
 
 ```{r, echo=FALSE}
 fuzz2.depthicity <- read.csv('fuzz2/summary-depthicity.csv')
-names(fuzz2.depthicity)[names(fuzz2.depthicity) == 'id'] <- 'depthicity'
 ```
 
 In the final experiment, the fragments had a deeply nested structure. All nodes, except the innermost leaf node, had exactly one child. `r length(fuzz2.depthicity$depthicity)` samples were collected in total.
@@ -71,3 +72,157 @@ ggplot(fuzz2.depthicity, aes(x = depthicity, y = Document..updateStyle)) +
   geom_point() +
   geom_smooth(method = 'lm')
 ```
+
+# Selector matching
+
+```{r, echo=FALSE}
+allSelectors <- read.csv('fuzz3/summary-all-selectors.csv')
+allSelectors$group <- 'All selectors'
+```
+
+Next, I modified the generator to add CSS rules as well. The generator supported the following selector types:
+
+* Universal selectors, `*`
+* Tag selectors, `foo`
+* ID selectors, `#bar`
+* Descendant selectors, `A B`
+* Child selectors, `A > B`
+* Adjacent sibling selectors, `A + B`
+* General sibling selectors, `A ~ B`
+
+Class selectors (`.baz`) were not included due to lack of time. But since they follow a similar code path to ID selectors, we can assume that they have similar performance properties. Future work should test this assumption.
+
+For these experiments the focus was on selector matching, so the body of each rule was set to `opacity: 0.99`. The `opacity` property was chosen so that noise from layout and painting was kept to a minimum. `r length(allSelectors$branchiness)` samples were collected in total.
+
+```{r, echo=FALSE}
+allSelectors.cor <- cor.test(allSelectors$ruleCount, allSelectors$Document..updateStyle)
+```
+
+Looking at the corrgram, there is a moderate correlation (r = `r allSelectors.cor$estimate`, p < `r allSelectors.cor$p.value`) between the number of CSS rules and the style update time:
+
+```{r, echo=FALSE, warning=FALSE}
+corrgram(allSelectors)
+```
+
+The dark region in the middle corresponds to the counts for each individual selector type. Since the number of selectors (of any type) grows with the total number of CSS rules, all of these metrics should be correlated with each other.
+
+```{r, echo=FALSE}
+allSelectors.generalSibling.cor <- cor.test(allSelectors$selectorsUsed.generalSibling, allSelectors$Document..updateStyle)
+```
+
+If we take a look at one of the selector types -- general sibling selectors for example -- we see a clear linear trend (r = `r allSelectors.generalSibling.cor$estimate`, p < `r allSelectors.generalSibling.cor$p.value`):
+
+```{r, echo=FALSE}
+ggplot(allSelectors, aes(x = selectorsUsed.generalSibling, y = Document..updateStyle)) +
+  labs(title = "Matching performance with general sibling selectors (A ~ B)",
+       x = "General sibling selectors (A ~ B) used, total",
+       y = "Time taken in Document::updateStyle (μs)") +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+## Sibling selectors and DOM branching factor
+
+```{r, echo=FALSE}
+branch.adjSibling <- read.csv('fuzz3/summary-adjacent-sibling-branchiness.csv')
+branch.genSibling <- read.csv('fuzz3/summary-general-sibling-branchiness.csv')
+
+branch.adjSibling.cor <- cor.test(~ branch.adjSibling$Document..updateStyle + branch.adjSibling$branchiness)
+branch.genSibling.cor <- cor.test(~ branch.genSibling$Document..updateStyle + branch.genSibling$branchiness)
+```
+
+Both adjacent sibling (`+`) and general sibling (`~`) selectors have a reputation for being slow. In particular, since a general sibling selector needs to check *all* the siblings before the current node, we would think that the time to match this selector would grow quadratically with the number of nodes in total.
+
+But the data says otherwise. Looking at the plot, the trend is in fact linear (p < `r branch.genSibling.cor$p.value`).
+
+```{r, echo=FALSE}
+ggplot(branch.genSibling, aes(x = nodeCount, y = Document..updateStyle)) +
+  labs(title = "General sibling selectors (A ~ B) with wide DOM trees",
+       x = "Node count",
+       y = "Time taken in Document::updateStyle (μs)") +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+Adjacent sibling selectors follow a linear trend as well (p < `r branch.adjSibling.cor$p.value`).
+
+```{r, echo=FALSE}
+ggplot(branch.adjSibling, aes(x = nodeCount, y = Document..updateStyle)) +
+  labs(title = "Adjacent sibling selectors (A + B) with wide DOM trees",
+       x = "Node count",
+       y = "Time taken in Document::updateStyle (μs)") +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+## Adding more classes and IDs
+
+```{r, echo=FALSE}
+moreIds <- read.csv('fuzz3/summary-more-ids.csv')
+moreIds$group <- 'With added ID selectors'
+
+moreIds.test <- wilcox.test(allSelectors$Document..updateStyle, moreIds$Document..updateStyle)
+```
+
+At first, it was thought that adding more class or ID selectors to a rule would speed up matching. The reasoning was: by placing these more efficient selectors front and center, we can filter out the majority of rules before they trigger the slower ancestor and sibling traversal code.
+
+This hypothesis turned out to be false. In fact, adding more ID selectors made matching slower (p < `r moreIds.test$p.value`):
+
+```{r, echo=FALSE}
+ggplot(rbind(allSelectors, moreIds), aes(x = ruleCount, y = Document..updateStyle, group = group, col = group, fill = group)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+## Comparing different selector types
+
+```{r, echo=FALSE}
+onlyChild <- read.csv('fuzz3/summary-only-child.csv')
+onlyChild$group <- 'Child selectors'
+onlyDescendant <- read.csv('fuzz3/summary-only-descendant.csv')
+onlyDescendant$group <- 'Descendant selectors'
+onlyIds <- read.csv('fuzz3/summary-only-ids.csv')
+onlyIds$group <- 'ID selectors'
+onlyAdjSibling <- read.csv('fuzz3/summary-only-adjacent-sibling.csv')
+onlyAdjSibling$group <- 'Adjacent sibling selectors'
+onlyGenSibling <- read.csv('fuzz3/summary-only-general-sibling.csv')
+onlyGenSibling$group <- 'General sibling selectors'
+onlyTags <- read.csv('fuzz3/summary-only-tags.csv')
+onlyTags$group <- 'Tag selectors only'
+everything <- rbind(onlyChild, onlyDescendant, onlyIds, onlyAdjSibling, onlyGenSibling, onlyTags)
+```
+
+Next, I ran six experiments, each exercising a single selector type. Class selectors were not tested since the generator did not support them, but they should behave in a similar way to ID selectors.
+
+I found that these selectors can be split into three categories based on performance:
+
+1. Tag selectors (fastest)
+2. ID, child, and descendant selectors
+3. Sibling selectors (slowest)
+
+This split can be seen in the plot below:
+
+```{r, echo=FALSE}
+ggplot(everything, aes(x = ruleCount, y = Document..updateStyle, group = group, col = group, fill = group)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
+
+It is interesting to note that general sibling selectors are about as fast as their adjacent counterparts.
+
+Child and descendant selectors having similar properties is interesting as well, though it is unclear whether this is true in general or specific to this experiment. The HTML fragments used here have a maximum tree depth of 2, so the engine does not have to search far to match a descendant selector.
+
+```{r, echo=FALSE}
+tagsAndIds.test <- wilcox.test(onlyTags$Document..updateStyle, onlyIds$Document..updateStyle)
+idsAndSiblings.test <- wilcox.test(onlyIds$Document..updateStyle, onlyAdjSibling$Document..updateStyle)
+```
+
+Running the Mann-Whitney U test, we can be very confident (p < `r tagsAndIds.test$p.value`) that tag selectors and ID selectors have different performance properties, and extremely confident (p < `r idsAndSiblings.test$p.value`) with ID selectors and sibling selectors as well.
+
+## Conclusions
+
+These results confirm the usual advice to favor classes and IDs over more complex selectors. But the speed of descendant selectors may seem counterintuitive. According to [Sullivan (2011)][1], optimizations such as ancestor filters and fast paths have made descendant selectors more efficient than intuition would suggest. In addition, while sibling selectors are slower than other types, their cost differs only by a constant factor; they do not have the quadratic behavior suggested by a naive implementation.
+
+Also surprising is how quickly these selectors match. The majority of cases run in well under the 100&nbsp;ms instantaneous threshold, the exceptions being in pages with more than 20,000 nodes. As WebKit developer Antii Koivisto wrote in 2011, "used in moderation pretty much everything will perform just fine from the style matching perspective."
+
+[1]: http://calendar.perfplanet.com/2011/css-selector-performance-has-changed-for-the-better/

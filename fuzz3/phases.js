@@ -1,4 +1,4 @@
-// Copyright 2015 Google Inc. All rights reserved.
+// Copyright 2016 Google Inc. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,24 @@ function typeVar(s) {
     return v[s];
   };
 }
+
+// Given a JSON object with two fields, "cssArgs" and "domArgs":
+//
+// 1. Output the value of "domArgs"; and
+// 2. Store the value of "cssArgs" in a tag of the same name.
+//
+// This is necessary because erlnmyr doesn't support multiple parallel
+// inputs. So we hack around this by storing the latter input in a tag.
+module.exports.separateCssAndDomArgs = erlnmyr.phase(
+  {
+    input: erlnmyr.types.JSON,
+    output: erlnmyr.types.JSON,
+    arity: '1:1',
+  },
+  function(args) {
+    this.tags.tag('cssArgs', args.cssArgs);
+    return args.domArgs;
+  });
 
 function predictedNodeCount(branchiness, depthicity) {
   // See <https://en.wikipedia.org/wiki/K-ary_tree#Properties_of_k-ary_trees>
@@ -101,4 +119,26 @@ module.exports.generateDom2 = erlnmyr.phase(
     this.tags.tag('ids', result.ids);
     this.tags.tag('seed', random.seed);
     return result.render();
+  });
+
+module.exports.generateCss = erlnmyr.phase(
+  {
+    input: erlnmyr.types.string,
+    output: erlnmyr.types.string,
+    arity: '1:1',
+  },
+  function(html) {
+    var random = generator2.makeRandom(this.tags.read('seed'));
+    var options = this.tags.read('cssArgs');
+    var classes = [];
+    var ids = this.tags.read('ids');
+    var ruleCount = random.randint(options.minRuleCount, options.maxRuleCount);
+    var result = generator2.generateCss(
+      random, options.tagMap, options.simpleSelectorMap, options.combinatorMap,
+      classes, ids, options.propertyString, ruleCount);
+    this.tags.tag('ruleCount', ruleCount);
+    for (var key of Object.keys(result.selectorsUsed)) {
+      this.tags.tag(`selectorsUsed.${key}`, result.selectorsUsed[key]);
+    }
+    return `<style>${result.render()}</style>\n${html}`;
   });

@@ -1,6 +1,6 @@
 digraph process {
   imports="['./phases', '../common']";
-  optionAliases="input=input.data,xvariable=amalgamate.idTag";
+  optionAliases="input=input.data,xvariables=amalgamate.tags";
 
   input -> readDir -> fileToJSON -> traceFilter -> updateTag -> extractTags;
   extractTags -> traceTree -> traceAnalyser -> amalgamate -> log;

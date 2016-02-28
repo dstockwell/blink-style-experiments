@@ -1,0 +1,19 @@
+{
+    "domArgs": {
+        "minBranchiness": 1,
+        "maxBranchiness": 200,
+        "minDepthicity": 2,
+        "maxDepthicity": 2,
+        "maxNodeCount": 1000000,
+        "tagMap": "alexa",
+        "samples": 50
+    },
+    "cssArgs": {
+        "propertyString": "opacity: 0.99",
+        "tagMap": {"*": 1, "div": 1, "span": 1, "p": 1, "b": 1, "h1": 1},
+        "simpleSelectorMap": {"class": 0, "id": 0, "end": 1},
+        "combinatorMap": {"descendant": 0, "child": 0, "adjacentSibling": 4, "generalSibling": 0, "end": 1},
+        "minRuleCount": 1,
+        "maxRuleCount": 1
+    }
+}

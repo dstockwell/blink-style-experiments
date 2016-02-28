@@ -2,7 +2,7 @@ digraph fuzz {
   imports="['./phases', '../common']";
   optionAliases="input=input.data,output=mergeTags.spec";
 
-  input -> fileToJSON -> generateSampleArgs -> generateDom2 -> log_1 -> dateTag -> trace -> mergeTags -> log_2 -> jsonStringify -> writeStringFile;
+  input -> fileToJSON -> generateDomSampleArgs -> generateDom2 -> log_1 -> dateTag -> trace -> mergeTags -> log_2 -> jsonStringify -> writeStringFile;
 
   log_1 [tags="['branchiness', 'depthicity', 'nodeCount']", justTags="true"];
   mergeTags [inputs="['date', 'branchiness', 'depthicity', 'nodeCount', 'seed']", output="filename"];

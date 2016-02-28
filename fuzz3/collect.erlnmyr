@@ -1,0 +1,12 @@
+digraph fuzz {
+  imports="['./phases', '../common']";
+  optionAliases="input=input.data,output=mergeTags.spec";
+
+  input -> fileToJSON -> separateCssAndDomArgs -> generateDomSampleArgs -> generateDom2 -> generateCss -> log_1 -> dateTag -> trace -> mergeTags -> traceFilter -> log_2 -> attachTagsToJson -> jsonStringify -> writeStringFile;
+
+  log_1 [tags="['branchiness', 'depthicity', 'nodeCount', 'ruleCount']", justTags="true"];
+  mergeTags [inputs="['date', 'seed']", output="filename"];
+  traceFilter [traceEvents="['HTMLDocumentParser::processParsedChunkFromBackgroundParser','Document::updateStyle','FrameView::performLayout']"];
+  log_2 [tags="['filename']", justTags="true"];
+  writeStringFile [tag="filename"];
+}

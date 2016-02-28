@@ -1,3 +1,5 @@
 #!/bin/sh
 
-../node_modules/erlenmeyer/erlnmyr process.erlnmyr --input=traces > summary.csv
+[ -z "$ERLNMYR" ] && ERLNMYR=erlnmyr
+
+$ERLNMYR process.erlnmyr --input=traces > summary.csv

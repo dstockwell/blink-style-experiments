@@ -24,6 +24,8 @@ function typeVar(s) {
   };
 }
 
+// Yields a range of integers from `start` (inclusive) to `end`
+// (exclusive), incrementing by `step`. `step` may be negative.
 module.exports.range = erlnmyr.phase(
   {
     input: erlnmyr.types.unit,
@@ -43,6 +45,17 @@ module.exports.range = erlnmyr.phase(
   },
   {start: 0, end: 10, step: 1});
 
+// Applies a JavaScript expression to every value that passes through.
+//
+// The evaluated expression has two variables in scope:
+// * it: the input to the phase
+// * tags: the attached tags
+//
+// Example: this code
+//
+//     map [expr="it * 2"];
+//
+// doubles every input that passes through.
 module.exports.map = erlnmyr.phase(
   {
     input: typeVar('a'),
@@ -56,6 +69,8 @@ module.exports.map = erlnmyr.phase(
   },
   {expr: 'it'});
 
+// Given an integer representing the number of element nodes, generates
+// a fragment of HTML.
 module.exports.generateDom = erlnmyr.phase(
   {
     input: erlnmyr.types.number,
